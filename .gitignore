@@ -6,4 +6,4 @@ venv/
 Lib/ 
 site-packages/ 
 .DS_Store 
-*.h5 
+
