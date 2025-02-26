@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZEB PV-system 설치 용량 예측 (비주거)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background-color: #f5f5ff;
+        }
+        h1 {
+            color: #4E03B0;
+            margin-bottom: 20px;
+        }
+        .description {
+            font-size: 17px;
+            margin-bottom: 70px;
+            color: #555;
+        }
+        .input-group, .output-group {
+            margin-bottom: 20px;
+        }
+        .input-group label, .output-group label {
+            font-weight: bold;
+            color: #4E03B0;
+            font-size: 14px;
+        }
+        .input-group input, .output-group input {
+            padding: 8px;
+            width: 350px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 12px 30px;
+            background-color: #4E03B0;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 40px 0;
+        }
+        button:hover {
+            background-color: #e7008f;
+        }
+        .result-box {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #E6E3FF;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ZEB PV-system 설치 규모 예측 (비주거)</h1>
+    <p class="description">[건축 설계 스펙] 및 [목표 자립률]을 입력하면, AI 모델이 필요한 [PV 설치 규모]를 안내합니다.</p>
+
+    <form onsubmit="event.preventDefault(); sendData();">
+        <div class="input-group">
+            <label>연면적 (㎡):</label>
+            <input type="number" id="area" placeholder="연면적을 입력해주세요. (500 이상)" required min="1" 
+                   oninvalid="this.setCustomValidity('1 이상의 자연수 입력 가능')" 
+                   oninput="this.setCustomValidity('')">
+        </div>
+
+        <div class="input-group">
+            <label>창면적비 (%):</label>
+            <input type="number" id="windowRatio" placeholder="창면적비를 입력해주세요. 평균값은 24.3 입니다." required min="1" max="100" step="0.1"
+                   oninvalid="this.setCustomValidity('소수점 첫째 자리까지 입력 가능')" 
+                   oninput="this.setCustomValidity('')">
+        </div>
+
+        <div class="input-group">
+            <label>열관류율_지붕 (W/㎡·K):</label>
+            <input type="number" id="roofU" placeholder="지붕 열관류율을 입력하세요. 평균값은 0.154 입니다." required min="0" step="0.001"
+                   oninvalid="this.setCustomValidity('소수점 셋째 자리까지 입력 가능')" 
+                   oninput="this.setCustomValidity('')">
+        </div>
+
+        <div class="input-group">
+            <label>열관류율_벽체 (W/㎡·K):</label>
+            <input type="number" id="wallU" placeholder="벽체 열관류율을 입력하세요. 평균값은 0.695 입니다." required min="0" step="0.001"
+                   oninvalid="this.setCustomValidity('소수점 셋째 자리까지 입력 가능')" 
+                   oninput="this.setCustomValidity('')">
+        </div>
+
+        <div class="input-group">
+            <label>열관류율_바닥 (W/㎡·K):</label>
+            <input type="number" id="floorU" placeholder="바닥 열관류율을 입력하세요. 평균값은 0.188 입니다." required min="0" step="0.001"
+                   oninvalid="this.setCustomValidity('소수점 셋째 자리까지 입력 가능')" 
+                   oninput="this.setCustomValidity('')">
+        </div>
+
+        <div class="input-group">
+            <label>목표 자립률 (%):</label>
+            <input type="number" id="target" placeholder="목표 자립률을 입력해주세요. (20 이상)" required min="1"
+                   oninvalid="this.setCustomValidity('1 이상의 자연수 입력 가능.')" 
+                   oninput="this.setCustomValidity('')">
+        </div>
+
+        <button type="submit">계 산 하 기</button>
+    </form>
+
+    <div class="result-box" id="resultBox" style="display:block;">
+        <div class="output-group">
+            <label>제로에너지건축물(ZEB) 인증 등급:</label>
+            <input type="text" id="zebGradeOutput" placeholder="계산 결과가 표시됩니다" readonly>
+        </div>
+        <div class="output-group">
+            <label>PV-system 예측 규모 (kW):</label>
+            <input type="text" id="pvCapacityOutput" placeholder="계산 결과가 표시됩니다" readonly>
+        </div>
+    </div>
+
+    <script>
+        function sendData() {
+            const data = {
+                area: document.getElementById("area").value,
+                windowRatio: document.getElementById("windowRatio").value,
+                roofU: document.getElementById("roofU").value,
+                wallU: document.getElementById("wallU").value,
+                floorU: document.getElementById("floorU").value,
+                target: document.getElementById("target").value
+            };
+
+            fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.error) {
+                    alert(result.error);
+                } else {
+                    document.getElementById("zebGradeOutput").value = result.zeb_grade;
+                    document.getElementById("pvCapacityOutput").value = result.predicted_pv;
+                }
+            })
+            .catch(error => console.error("🚨 오류 발생:", error));
+        }
+    </script>
+
+</body>
+</html>
